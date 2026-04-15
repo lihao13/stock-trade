@@ -63,6 +63,14 @@
           </div>
           <div class="stat-label">总盈亏</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-value">{{stats.tradeVolumeShares | number:0}}</div>
+          <div class="stat-label">成交量（股）</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{stats.tradeVolumeAmount | currency}}</div>
+          <div class="stat-label">成交额</div>
+        </div>
       </div>
     </div>
 
@@ -169,7 +177,9 @@
         totalPositions: 0,
         totalMarketValue: 0,
         totalPnL: 0,
-        pnlPercent: 0
+        pnlPercent: 0,
+        tradeVolumeShares: 0,
+        tradeVolumeAmount: 0
       };
       $scope.positions = [];
       $scope.recentOrders = [];
@@ -187,7 +197,9 @@
               totalPositions: res.data.totalPositions,
               totalMarketValue: res.data.totalMarketValue,
               totalPnL: res.data.totalPnL,
-              pnlPercent: res.data.pnlPercent
+              pnlPercent: res.data.pnlPercent,
+              tradeVolumeShares: res.data.tradeVolumeShares || 0,
+              tradeVolumeAmount: res.data.tradeVolumeAmount || 0
             };
             $scope.positions = res.data.positions;
             $scope.recentOrders = res.data.recentOrders;

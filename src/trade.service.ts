@@ -102,25 +102,39 @@ export class TradeService {
   async getPortfolioStats() {
     const positions = await this.getPositions();
     const orders = await this.getOrders();
-    
+
+    const completedOrders = await this.orderRepository.find({
+      where: { status: 'completed' },
+    });
+    let tradeVolumeShares = 0;
+    let tradeVolumeAmount = 0;
+    completedOrders.forEach((o) => {
+      const qty = Number(o.quantity);
+      const px = Number(o.price);
+      tradeVolumeShares += qty;
+      tradeVolumeAmount += px * qty;
+    });
+
     let totalMarketValue = 0;
     let totalPnL = 0;
     let totalCost = 0;
-    
-    positions.forEach(p => {
+
+    positions.forEach((p) => {
       totalMarketValue += p.marketValue;
       totalPnL += p.pnl;
       totalCost += p.avgPrice * p.quantity;
     });
-    
+
     const pnlPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-    
+
     return {
       totalPositions: positions.length,
       totalMarketValue,
       totalPnL,
       totalCost,
       pnlPercent: Number(pnlPercent.toFixed(2)),
+      tradeVolumeShares,
+      tradeVolumeAmount,
       positions,
       recentOrders: orders.slice(0, 10),
     };
