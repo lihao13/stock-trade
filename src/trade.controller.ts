@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Delete, Param, Query } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Delete,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { TradeService } from './trade.service';
 import { Order } from './order.entity';
 

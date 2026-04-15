@@ -20,7 +20,7 @@ export class Order {
   @Column('decimal', { nullable: true })
   profit: number;
 
-  @Column()
+  @Column({ default: () => 'CURRENT_TIMESTAMP' })
   timestamp: number;
 
   @Column({ default: 'completed' })

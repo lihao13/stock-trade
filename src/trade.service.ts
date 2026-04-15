@@ -29,9 +29,13 @@ export class TradeService {
   }
 
   async createOrder(order: Partial<Order>) {
-    const newOrder = this.orderRepository.create(order);
+    const newOrder = this.orderRepository.create({
+      ...order,
+      timestamp: Date.now(),
+      status: 'completed',
+    });
     await this.orderRepository.save(newOrder);
-    
+
     // 更新持仓
     await this.updatePositions();
     return newOrder;
@@ -51,16 +55,16 @@ export class TradeService {
   async updatePositions() {
     // 重新计算持仓
     // 这里简化处理，实际应该从订单计算
-    const completedOrders = await this.orderRepository.find({ 
-      where: { status: 'completed' } 
+    const completedOrders = await this.orderRepository.find({
+      where: { status: 'completed' },
     });
-    
+
     // 先清空，重新计算
     await this.positionRepository.clear();
-    
+
     const positionMap = new Map<string, any>();
-    
-    completedOrders.forEach(order => {
+
+    completedOrders.forEach((order) => {
       const key = order.symbol;
       if (!positionMap.has(key)) {
         positionMap.set(key, {
@@ -70,7 +74,7 @@ export class TradeService {
         });
       }
       const pos = positionMap.get(key);
-      
+
       if (order.side === 'buy') {
         pos.totalQuantity += order.quantity;
         pos.totalAmount += order.price * order.quantity;
@@ -78,10 +82,10 @@ export class TradeService {
         pos.totalQuantity -= order.quantity;
         pos.totalAmount -= order.price * order.quantity;
       }
-      
+
       positionMap.set(key, pos);
     });
-    
+
     // 保存到数据库
     for (const [symbol, pos] of positionMap) {
       if (pos.totalQuantity > 0) {
@@ -102,19 +106,19 @@ export class TradeService {
   async getPortfolioStats() {
     const positions = await this.getPositions();
     const orders = await this.getOrders();
-    
+
     let totalMarketValue = 0;
     let totalPnL = 0;
     let totalCost = 0;
-    
-    positions.forEach(p => {
+
+    positions.forEach((p) => {
       totalMarketValue += p.marketValue;
       totalPnL += p.pnl;
       totalCost += p.avgPrice * p.quantity;
     });
-    
+
     const pnlPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-    
+
     return {
       totalPositions: positions.length,
       totalMarketValue,
@@ -130,8 +134,8 @@ export class TradeService {
     if (!query) return [];
     return this.stockRepository
       .createQueryBuilder('stock')
-      .where('stock.symbol LIKE :query OR stock.name LIKE :query', { 
-        query: `%${query}%` 
+      .where('stock.symbol LIKE :query OR stock.name LIKE :query', {
+        query: `%${query}%`,
       })
       .take(20)
       .getMany();
