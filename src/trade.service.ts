@@ -103,12 +103,10 @@ export class TradeService {
     const positions = await this.getPositions();
     const orders = await this.getOrders();
 
-    const completedOrders = await this.orderRepository.find({
-      where: { status: 'completed' },
-    });
     let tradeVolumeShares = 0;
     let tradeVolumeAmount = 0;
-    completedOrders.forEach((o) => {
+    orders.forEach((o) => {
+      if (o.status !== 'completed') return;
       const qty = Number(o.quantity);
       const px = Number(o.price);
       tradeVolumeShares += qty;
