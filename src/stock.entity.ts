@@ -14,6 +14,10 @@ export class Stock {
   @Column()
   exchange: string;
 
+  /** stock | etf | crypto */
+  @Column({ default: 'stock' })
+  kind: 'stock' | 'etf' | 'crypto';
+
   @Column('decimal', { nullable: true })
   currentPrice: number;
 

@@ -17,6 +17,10 @@ export class Order {
   @Column()
   side: 'buy' | 'sell';
 
+  /** stock | etf | crypto */
+  @Column({ default: 'stock' })
+  market: 'stock' | 'etf' | 'crypto';
+
   @Column('decimal', { nullable: true })
   profit: number;
 

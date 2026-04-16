@@ -5,6 +5,12 @@ import { Order } from './order.entity';
 import { Position } from './position.entity';
 import { Stock } from './stock.entity';
 
+export type MarketKind = 'stock' | 'etf' | 'crypto';
+
+function positionKey(market: string, symbol: string) {
+  return `${market || 'stock'}:${symbol}`;
+}
+
 @Injectable()
 export class TradeService {
   constructor(
@@ -16,23 +22,35 @@ export class TradeService {
     private stockRepository: Repository<Stock>,
   ) {}
 
-  async getOrders() {
-    return this.orderRepository.find({
-      order: { timestamp: 'DESC' },
-    });
+  async getOrders(market?: MarketKind) {
+    const qb = this.orderRepository
+      .createQueryBuilder('o')
+      .orderBy('o.timestamp', 'DESC');
+    if (market) {
+      qb.where('o.market = :market', { market });
+    }
+    return qb.getMany();
   }
 
-  async getPositions() {
-    return this.positionRepository.find({
-      order: { updateTime: 'DESC' },
-    });
+  async getPositions(market?: MarketKind) {
+    const qb = this.positionRepository
+      .createQueryBuilder('p')
+      .orderBy('p.updateTime', 'DESC');
+    if (market) {
+      qb.where('p.market = :market', { market });
+    }
+    return qb.getMany();
   }
 
   async createOrder(order: Partial<Order>) {
-    const newOrder = this.orderRepository.create(order);
+    const market = (order.market as MarketKind) || 'stock';
+    const newOrder = this.orderRepository.create({
+      ...order,
+      market,
+      timestamp: order.timestamp ?? Date.now(),
+      status: order.status ?? 'pending',
+    });
     await this.orderRepository.save(newOrder);
-    
-    // 更新持仓
     await this.updatePositions();
     return newOrder;
   }
@@ -42,54 +60,71 @@ export class TradeService {
     if (!order) {
       return { success: false, message: 'Order not found' };
     }
+    if (order.status !== 'pending') {
+      return { success: false, message: 'Only pending orders can be cancelled' };
+    }
     order.status = 'cancelled';
     await this.orderRepository.save(order);
     await this.updatePositions();
     return { success: true };
   }
 
+  async completeOrder(id: number) {
+    const order = await this.orderRepository.findOne({ where: { id } });
+    if (!order) {
+      return { success: false, message: 'Order not found' };
+    }
+    if (order.status !== 'pending') {
+      return { success: false, message: 'Only pending orders can be completed' };
+    }
+    order.status = 'completed';
+    await this.orderRepository.save(order);
+    await this.updatePositions();
+    return { success: true, order };
+  }
+
   async updatePositions() {
-    // 重新计算持仓
-    // 这里简化处理，实际应该从订单计算
-    const completedOrders = await this.orderRepository.find({ 
-      where: { status: 'completed' } 
+    const completedOrders = await this.orderRepository.find({
+      where: { status: 'completed' },
     });
-    
-    // 先清空，重新计算
+
     await this.positionRepository.clear();
-    
-    const positionMap = new Map<string, any>();
-    
-    completedOrders.forEach(order => {
-      const key = order.symbol;
+
+    const positionMap = new Map<
+      string,
+      { symbol: string; market: MarketKind; totalQuantity: number; totalAmount: number }
+    >();
+
+    completedOrders.forEach((order) => {
+      const market = (order.market as MarketKind) || 'stock';
+      const key = positionKey(market, order.symbol);
       if (!positionMap.has(key)) {
         positionMap.set(key, {
           symbol: order.symbol,
+          market,
           totalQuantity: 0,
           totalAmount: 0,
         });
       }
       const pos = positionMap.get(key);
-      
       if (order.side === 'buy') {
-        pos.totalQuantity += order.quantity;
-        pos.totalAmount += order.price * order.quantity;
+        pos.totalQuantity += Number(order.quantity);
+        pos.totalAmount += Number(order.price) * Number(order.quantity);
       } else {
-        pos.totalQuantity -= order.quantity;
-        pos.totalAmount -= order.price * order.quantity;
+        pos.totalQuantity -= Number(order.quantity);
+        pos.totalAmount -= Number(order.price) * Number(order.quantity);
       }
-      
       positionMap.set(key, pos);
     });
-    
-    // 保存到数据库
-    for (const [symbol, pos] of positionMap) {
+
+    for (const [, pos] of positionMap) {
       if (pos.totalQuantity > 0) {
         const position = new Position();
-        position.symbol = symbol;
+        position.symbol = pos.symbol;
+        position.market = pos.market;
         position.avgPrice = pos.totalAmount / pos.totalQuantity;
         position.quantity = pos.totalQuantity;
-        position.currentPrice = position.avgPrice; // 默认
+        position.currentPrice = position.avgPrice;
         position.marketValue = position.avgPrice * position.quantity;
         position.pnl = 0;
         position.pnlPercent = 0;
@@ -99,22 +134,22 @@ export class TradeService {
     }
   }
 
-  async getPortfolioStats() {
-    const positions = await this.getPositions();
-    const orders = await this.getOrders();
-    
+  async getPortfolioStats(market?: MarketKind) {
+    const positions = await this.getPositions(market);
+    const orders = await this.getOrders(market);
+
     let totalMarketValue = 0;
     let totalPnL = 0;
     let totalCost = 0;
-    
-    positions.forEach(p => {
-      totalMarketValue += p.marketValue;
-      totalPnL += p.pnl;
-      totalCost += p.avgPrice * p.quantity;
+
+    positions.forEach((p) => {
+      totalMarketValue += Number(p.marketValue);
+      totalPnL += Number(p.pnl);
+      totalCost += Number(p.avgPrice) * Number(p.quantity);
     });
-    
+
     const pnlPercent = totalCost > 0 ? (totalPnL / totalCost) * 100 : 0;
-    
+
     return {
       totalPositions: positions.length,
       totalMarketValue,
@@ -122,18 +157,32 @@ export class TradeService {
       totalCost,
       pnlPercent: Number(pnlPercent.toFixed(2)),
       positions,
-      recentOrders: orders.slice(0, 10),
+      recentOrders: orders.slice(0, 20),
     };
   }
 
-  async searchStocks(query: string) {
-    if (!query) return [];
-    return this.stockRepository
-      .createQueryBuilder('stock')
-      .where('stock.symbol LIKE :query OR stock.name LIKE :query', { 
-        query: `%${query}%` 
-      })
-      .take(20)
-      .getMany();
+  async searchStocks(query: string, kind?: 'stock' | 'etf' | 'crypto') {
+    const qb = this.stockRepository.createQueryBuilder('stock');
+    if (query) {
+      qb.where(
+        '(stock.symbol LIKE :query OR stock.name LIKE :query)',
+        { query: `%${query}%` },
+      );
+    }
+    if (kind) {
+      if (query) {
+        qb.andWhere('stock.kind = :kind', { kind });
+      } else {
+        qb.where('stock.kind = :kind', { kind });
+      }
+    }
+    return qb.orderBy('stock.symbol', 'ASC').take(50).getMany();
+  }
+
+  async listInstruments(kind: 'stock' | 'etf' | 'crypto') {
+    return this.stockRepository.find({
+      where: { kind, isActive: true },
+      order: { symbol: 'ASC' },
+    });
   }
 }
