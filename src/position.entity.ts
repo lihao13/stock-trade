@@ -8,6 +8,10 @@ export class Position {
   @Column()
   symbol: string;
 
+  /** stock | etf | crypto */
+  @Column({ default: 'stock' })
+  market: 'stock' | 'etf' | 'crypto';
+
   @Column('decimal')
   avgPrice: number;
 

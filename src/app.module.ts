@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TradeController } from './trade.controller';
 import { TradeService } from './trade.service';
+import { SeedService } from './seed.service';
 import { Order } from './order.entity';
 import { Position } from './position.entity';
 import { Stock } from './stock.entity';
@@ -20,6 +21,6 @@ import { Stock } from './stock.entity';
     TypeOrmModule.forFeature([Order, Position, Stock]),
   ],
   controllers: [AppController, TradeController],
-  providers: [AppService, TradeService],
+  providers: [AppService, TradeService, SeedService],
 })
 export class AppModule {}

@@ -1,5 +1,13 @@
-import { Controller, Get, Post, Body, Delete, Param, Query } from '@nestjs/common';
-import { TradeService } from './trade.service';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Delete,
+  Param,
+  Query,
+} from '@nestjs/common';
+import { TradeService, MarketKind } from './trade.service';
 import { Order } from './order.entity';
 
 @Controller('api/trade')
@@ -7,13 +15,13 @@ export class TradeController {
   constructor(private readonly tradeService: TradeService) {}
 
   @Get('orders')
-  getOrders() {
-    return this.tradeService.getOrders();
+  getOrders(@Query('market') market?: MarketKind) {
+    return this.tradeService.getOrders(market);
   }
 
   @Get('positions')
-  getPositions() {
-    return this.tradeService.getPositions();
+  getPositions(@Query('market') market?: MarketKind) {
+    return this.tradeService.getPositions(market);
   }
 
   @Post('order')
@@ -26,13 +34,26 @@ export class TradeController {
     return this.tradeService.cancelOrder(+id);
   }
 
+  @Post('order/:id/complete')
+  completeOrder(@Param('id') id: string) {
+    return this.tradeService.completeOrder(+id);
+  }
+
   @Get('portfolio')
-  getPortfolio() {
-    return this.tradeService.getPortfolioStats();
+  getPortfolio(@Query('market') market?: MarketKind) {
+    return this.tradeService.getPortfolioStats(market);
   }
 
   @Get('search')
-  searchStocks(@Query('q') q: string) {
-    return this.tradeService.searchStocks(q);
+  searchStocks(
+    @Query('q') q: string,
+    @Query('kind') kind?: 'stock' | 'etf' | 'crypto',
+  ) {
+    return this.tradeService.searchStocks(q || '', kind);
+  }
+
+  @Get('instruments/:kind')
+  listInstruments(@Param('kind') kind: 'stock' | 'etf' | 'crypto') {
+    return this.tradeService.listInstruments(kind);
   }
 }
