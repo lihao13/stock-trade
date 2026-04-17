@@ -19,8 +19,11 @@
 ## 快速开始
 
 ```bash
-# 安装依赖
-npm install
+# 安装依赖（需加 --legacy-peer-deps，见下方说明）
+npm install --legacy-peer-deps
+
+# 若想清空编译产物与本地数据库后重装依赖（练习时可随时执行）
+npm run reinit
 
 # 开发运行
 npm run start:dev
@@ -41,8 +44,14 @@ npm run start:prod
 
 ## 访问
 
-前端: 打开 `public/index.html` 直接访问
+前端: 打开 `public/index.html` 直接访问，或启动后端后访问 http://localhost:3001/（静态页由 Nest 托管）
 后端 API: http://localhost:3001
+
+## 本地练习与重置
+
+- `npm run reinit`：删除 `dist/`、`stock-trade.db` 并重新 `npm install --legacy-peer-deps`，适合想从干净数据库和依赖状态开始练习时执行。
+- 仅清空数据库：删除项目根目录下的 `stock-trade.db`，下次启动会由 TypeORM 自动重建。
+- 更多运行说明见仓库根目录 `AGENTS.md`。
 
 ## 许可证
 

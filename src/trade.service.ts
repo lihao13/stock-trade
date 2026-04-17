@@ -61,7 +61,10 @@ export class TradeService {
       return { success: false, message: 'Order not found' };
     }
     if (order.status !== 'pending') {
-      return { success: false, message: 'Only pending orders can be cancelled' };
+      return {
+        success: false,
+        message: 'Only pending orders can be cancelled',
+      };
     }
     order.status = 'cancelled';
     await this.orderRepository.save(order);
@@ -75,7 +78,10 @@ export class TradeService {
       return { success: false, message: 'Order not found' };
     }
     if (order.status !== 'pending') {
-      return { success: false, message: 'Only pending orders can be completed' };
+      return {
+        success: false,
+        message: 'Only pending orders can be completed',
+      };
     }
     order.status = 'completed';
     await this.orderRepository.save(order);
@@ -92,7 +98,12 @@ export class TradeService {
 
     const positionMap = new Map<
       string,
-      { symbol: string; market: MarketKind; totalQuantity: number; totalAmount: number }
+      {
+        symbol: string;
+        market: MarketKind;
+        totalQuantity: number;
+        totalAmount: number;
+      }
     >();
 
     completedOrders.forEach((order) => {
@@ -164,10 +175,9 @@ export class TradeService {
   async searchStocks(query: string, kind?: 'stock' | 'etf' | 'crypto') {
     const qb = this.stockRepository.createQueryBuilder('stock');
     if (query) {
-      qb.where(
-        '(stock.symbol LIKE :query OR stock.name LIKE :query)',
-        { query: `%${query}%` },
-      );
+      qb.where('(stock.symbol LIKE :query OR stock.name LIKE :query)', {
+        query: `%${query}%`,
+      });
     }
     if (kind) {
       if (query) {
