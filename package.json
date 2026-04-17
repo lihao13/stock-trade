@@ -4,6 +4,8 @@
   "description": "Stock Trading Application - AngularJS + NestJS",
   "main": "dist/main.js",
   "scripts": {
+    "clean": "rm -rf dist",
+    "reinit": "npm run clean && rm -f stock-trade.db && npm install --legacy-peer-deps",
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
